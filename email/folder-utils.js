@@ -64,52 +64,40 @@ async function resolveFolderPath(accessToken, folderName) {
  * @param {string} accessToken - Access token
  * @param {string} folderName - Name of the folder to find
  * @returns {Promise<string|null>} - Folder ID or null if not found
+ * Now searches top-level folders
+ * and one level of child folders (e.g. Inbox subfolders).
  */
 async function getFolderIdByName(accessToken, folderName) {
-  try {
-    // First try with exact match filter
-    console.error(`Looking for folder with name "${folderName}"`);
-    const response = await callGraphAPI(
-      accessToken,
-      'GET',
-      'me/mailFolders',
-      null,
-      { $filter: `displayName eq '${folderName}'` }
-    );
-    
-    if (response.value && response.value.length > 0) {
-      console.error(`Found folder "${folderName}" with ID: ${response.value[0].id}`);
-      return response.value[0].id;
+  const { callGraphAPI } = require('../utils/graph-api');
+  const normalised = folderName.trim().toLowerCase();
+
+  // 1. Fetch all top-level mail folders
+  const topLevel = await callGraphAPI(accessToken, 'GET', 'me/mailFolders?$top=50');
+  const folders = topLevel.value || [];
+
+  // 2. Check top-level folders first
+  for (const folder of folders) {
+    if (folder.displayName.toLowerCase() === normalised) {
+      return folder.id;
     }
-    
-    // If exact match fails, try to get all folders and do a case-insensitive comparison
-    console.error(`No exact match found for "${folderName}", trying case-insensitive search`);
-    const allFoldersResponse = await callGraphAPI(
+  }
+
+  // 3. Not found at top level — search one level of child folders
+  for (const folder of folders) {
+    const children = await callGraphAPI(
       accessToken,
       'GET',
-      'me/mailFolders',
-      null,
-      { $top: 100 }
+      `me/mailFolders/${folder.id}/childFolders?$top=50`
     );
-    
-    if (allFoldersResponse.value) {
-      const lowerFolderName = folderName.toLowerCase();
-      const matchingFolder = allFoldersResponse.value.find(
-        folder => folder.displayName.toLowerCase() === lowerFolderName
-      );
-      
-      if (matchingFolder) {
-        console.error(`Found case-insensitive match for "${folderName}" with ID: ${matchingFolder.id}`);
-        return matchingFolder.id;
+    for (const child of (children.value || [])) {
+      if (child.displayName.toLowerCase() === normalised) {
+        return child.id;
       }
     }
-    
-    console.error(`No folder found matching "${folderName}"`);
-    return null;
-  } catch (error) {
-    console.error(`Error finding folder "${folderName}": ${error.message}`);
-    return null;
   }
+
+  // 4. Not found anywhere
+  return null;
 }
 
 /**
