@@ -68,11 +68,10 @@ async function resolveFolderPath(accessToken, folderName) {
  * and one level of child folders (e.g. Inbox subfolders).
  */
 async function getFolderIdByName(accessToken, folderName) {
-  const { callGraphAPI } = require('../utils/graph-api');
   const normalised = folderName.trim().toLowerCase();
 
-  // 1. Fetch all top-level mail folders
-  const topLevel = await callGraphAPI(accessToken, 'GET', 'me/mailFolders?$top=50');
+  // 1. Fetch all top-level mail folders (pass $top as queryParams, not inline)
+  const topLevel = await callGraphAPI(accessToken, 'GET', 'me/mailFolders', null, { $top: 50 });
   const folders = topLevel.value || [];
 
   // 2. Check top-level folders first
@@ -82,12 +81,14 @@ async function getFolderIdByName(accessToken, folderName) {
     }
   }
 
-  // 3. Not found at top level — search one level of child folders
+  // 3. Search one level of child folders (Inbox subfolders etc.)
   for (const folder of folders) {
     const children = await callGraphAPI(
       accessToken,
       'GET',
-      `me/mailFolders/${folder.id}/childFolders?$top=50`
+      `me/mailFolders/${folder.id}/childFolders`,
+      null,
+      { $top: 50 }   // <-- queryParams argument, not inline
     );
     for (const child of (children.value || [])) {
       if (child.displayName.toLowerCase() === normalised) {
@@ -99,6 +100,7 @@ async function getFolderIdByName(accessToken, folderName) {
   // 4. Not found anywhere
   return null;
 }
+
 
 /**
  * Get all mail folders
