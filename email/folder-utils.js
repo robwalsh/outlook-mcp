@@ -70,34 +70,46 @@ async function resolveFolderPath(accessToken, folderName) {
 async function getFolderIdByName(accessToken, folderName) {
   const normalised = folderName.trim().toLowerCase();
 
-  // 1. Fetch all top-level mail folders (pass $top as queryParams, not inline)
+  // 1. Fetch all top-level mail folders
   const topLevel = await callGraphAPI(accessToken, 'GET', 'me/mailFolders', null, { $top: 50 });
   const folders = topLevel.value || [];
+  console.error(`getFolderIdByName: found ${folders.length} top-level folders`);
 
   // 2. Check top-level folders first
   for (const folder of folders) {
     if (folder.displayName.toLowerCase() === normalised) {
+      console.error(`getFolderIdByName: matched "${folderName}" at top level, id: ${folder.id}`);
       return folder.id;
     }
   }
 
-  // 3. Search one level of child folders (Inbox subfolders etc.)
+  // 3. Search one level of child folders (e.g. Inbox/1-Action, Inbox/3-Done)
+  //    Wrap each child call individually — some system folders (Sync Issues,
+  //    Conversation History, RSS Subscriptions) return 400/404 for childFolders
+  //    and must not abort the whole search.
   for (const folder of folders) {
-    const children = await callGraphAPI(
-      accessToken,
-      'GET',
-      `me/mailFolders/${folder.id}/childFolders`,
-      null,
-      { $top: 50 }   // <-- queryParams argument, not inline
-    );
-    for (const child of (children.value || [])) {
-      if (child.displayName.toLowerCase() === normalised) {
-        return child.id;
+    try {
+      const children = await callGraphAPI(
+        accessToken,
+        'GET',
+        `me/mailFolders/${folder.id}/childFolders`,
+        null,
+        { $top: 50 }
+      );
+      for (const child of (children.value || [])) {
+        if (child.displayName.toLowerCase() === normalised) {
+          console.error(`getFolderIdByName: matched "${folderName}" under "${folder.displayName}", id: ${child.id}`);
+          return child.id;
+        }
       }
+    } catch (err) {
+      // Skip folders that don't support childFolders (system folders etc.)
+      console.error(`getFolderIdByName: skipping "${folder.displayName}" — ${err.message}`);
     }
   }
 
   // 4. Not found anywhere
+  console.error(`getFolderIdByName: "${folderName}" not found in top-level or child folders`);
   return null;
 }
 
