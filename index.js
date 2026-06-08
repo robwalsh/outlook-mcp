@@ -6,6 +6,16 @@
  * Microsoft 365 services (Outlook, OneDrive, Power Automate)
  * through the Microsoft Graph API and Flow API.
  */
+
+// Load environment variables from .env before anything reads process.env.
+// The MCP server is launched by Claude Desktop and does not otherwise inherit
+// the .env used by the standalone auth server. Without this, MS_CLIENT_SECRET /
+// OUTLOOK_CLIENT_SECRET are absent and token refresh fails silently, capping
+// sessions at a single access-token lifetime (~1 hour) instead of the rolling
+// 90-day refresh-token window. Anchor to __dirname so it loads regardless of the
+// cwd Claude Desktop launches the server from.
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
 const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
 const config = require('./config');

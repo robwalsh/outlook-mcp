@@ -74,22 +74,23 @@ async function callGraphAPI(accessToken, method, path, data = null, queryParams 
       console.error(`Full URL: ${finalUrl}`);
     }
     
-    return new Promise((resolve, reject) => {
+    // Single attempt against the Graph API with a given bearer token.
+    const sendRequest = (token) => new Promise((resolve, reject) => {
       const options = {
         method: method,
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       };
-      
+
       const req = https.request(finalUrl, options, (res) => {
         let responseData = '';
-        
+
         res.on('data', (chunk) => {
           responseData += chunk;
         });
-        
+
         res.on('end', () => {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             try {
@@ -107,17 +108,39 @@ async function callGraphAPI(accessToken, method, path, data = null, queryParams 
           }
         });
       });
-      
+
       req.on('error', (error) => {
         reject(new Error(`Network error during API call: ${error.message}`));
       });
-      
+
       if (data && (method === 'POST' || method === 'PATCH' || method === 'PUT')) {
         req.write(JSON.stringify(data));
       }
-      
+
       req.end();
     });
+
+    try {
+      return await sendRequest(accessToken);
+    } catch (error) {
+      // On a 401, the access token may have been invalidated server-side before
+      // its expiry (revocation, CAE, password/MFA change). Force one refresh and
+      // retry, so a single early invalidation self-heals instead of surfacing as
+      // a hard auth failure. Lazy require avoids a circular dependency at load.
+      if (error && error.message === 'UNAUTHORIZED') {
+        let freshToken = null;
+        try {
+          freshToken = await require('../auth').refreshActiveToken();
+        } catch (refreshErr) {
+          console.error('Refresh-on-401 failed:', refreshErr && refreshErr.message);
+        }
+        if (freshToken && freshToken !== accessToken) {
+          console.error('Retrying Graph API call with refreshed token after 401');
+          return await sendRequest(freshToken);
+        }
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Error calling Graph API:', error);
     throw error;

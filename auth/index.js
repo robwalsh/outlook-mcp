@@ -29,8 +29,26 @@ async function ensureAuthenticated(forceNew = false) {
   return accessToken;
 }
 
+/**
+ * Forces a refresh of the access token, regardless of its current expiry.
+ * Used to recover from a 401 when the access token was invalidated server-side
+ * before its expires_at (e.g. revocation, CAE, password/MFA change). Returns the
+ * fresh access token, or null if no usable refresh token is available.
+ * @returns {Promise<string|null>} - A new access token, or null
+ */
+async function refreshActiveToken() {
+  try {
+    await tokenStorage.getTokens(); // ensure tokens are loaded from disk
+    return await tokenStorage.refreshAccessToken();
+  } catch (error) {
+    console.error('Forced token refresh failed:', error && error.message);
+    return null;
+  }
+}
+
 module.exports = {
   tokenManager,
   authTools,
-  ensureAuthenticated
+  ensureAuthenticated,
+  refreshActiveToken
 };

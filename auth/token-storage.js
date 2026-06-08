@@ -102,9 +102,20 @@ class TokenStorage {
         try {
           return await this.refreshAccessToken();
         } catch (refreshError) {
-          console.error('Failed to refresh access token:', refreshError);
-          this.tokens = null; // Invalidate tokens on refresh failure
-          await this._saveTokensToFile(); // Persist invalidation
+          // Only discard the refresh token when Microsoft tells us it is truly
+          // dead (invalid_grant: expired, revoked, or consent withdrawn). Any
+          // other failure — network blip, throttling (429), or a transient
+          // invalid_client from a momentarily-missing secret — must NOT nuke the
+          // session, or one hiccup forces a full re-auth. Keep the tokens and
+          // let the next call retry.
+          const fatal = /invalid_grant/i.test(refreshError && refreshError.message || '');
+          console.error(
+            `Failed to refresh access token (${fatal ? 'fatal: invalid_grant' : 'transient, will retry'}):`,
+            refreshError && refreshError.message
+          );
+          if (fatal) {
+            await this.clearTokens(); // remove the dead refresh token from disk
+          }
           return null;
         }
       } else {

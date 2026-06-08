@@ -47,7 +47,7 @@ describe('TokenStorage', () => {
     it('should warn if client ID or secret is missing', () => {
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       new TokenStorage({ ...baseConfig, clientId: null });
-      expect(consoleWarnSpy).toHaveBeenCalledWith("TokenStorage: MS_CLIENT_ID or MS_CLIENT_SECRET is not configured. Token operations might fail.");
+      expect(consoleWarnSpy).toHaveBeenCalledWith("TokenStorage: Client ID or Secret is not configured (checked MS_CLIENT_ID/OUTLOOK_CLIENT_ID). Token refresh will fail.");
       consoleWarnSpy.mockRestore();
     });
   });
@@ -467,29 +467,38 @@ describe('TokenStorage', () => {
         expect(token).toBe('refreshed_token_from_spy');
     });
 
-    it('should return null and clear tokens if refresh fails', async () => {
+    it('should retain tokens and return null on a TRANSIENT refresh failure (so the next call can retry)', async () => {
         tokenStorage.tokens = {
             access_token: 'expired_token_will_fail',
             refresh_token: 'will_fail_refresh',
             expires_at: Date.now() - 1000
         };
-        jest.spyOn(tokenStorage, 'refreshAccessToken').mockRejectedValue(new Error('Refresh failed'));
-        const saveSpy = jest.spyOn(tokenStorage, '_saveTokensToFile');
+        // A non-invalid_grant error (network blip, 429 throttle, momentary invalid_client)
+        // must NOT destroy the session.
+        jest.spyOn(tokenStorage, 'refreshAccessToken').mockRejectedValue(new Error('socket hang up'));
+        const clearSpy = jest.spyOn(tokenStorage, 'clearTokens');
 
         const token = await tokenStorage.getValidAccessToken();
         expect(token).toBeNull();
-        expect(tokenStorage.tokens).toBeNull(); // Tokens should be invalidated
-        expect(saveSpy).toHaveBeenCalled(); // Invalidation should be persisted
+        expect(tokenStorage.tokens).not.toBeNull(); // refresh token preserved for retry
+        expect(tokenStorage.tokens.refresh_token).toBe('will_fail_refresh');
+        expect(clearSpy).not.toHaveBeenCalled();
     });
 
-    it('should propagate error if saving nulled token fails after refresh failure', async () => {
-        tokenStorage.tokens = { access_token: 'expired_token_save_fail', refresh_token: 'refresh_me', expires_at: Date.now() - 1000 };
-        jest.spyOn(tokenStorage, 'refreshAccessToken').mockRejectedValue(new Error('Refresh API down'));
-        const saveError = new Error('Disk write error during null save');
-        jest.spyOn(tokenStorage, '_saveTokensToFile').mockRejectedValueOnce(saveError); // This is key
+    it('should clear tokens and return null on a FATAL refresh failure (invalid_grant)', async () => {
+        tokenStorage.tokens = {
+            access_token: 'expired_token_dead_refresh',
+            refresh_token: 'dead_refresh',
+            expires_at: Date.now() - 1000
+        };
+        // invalid_grant means the refresh token is truly dead (expired/revoked/consent withdrawn).
+        jest.spyOn(tokenStorage, 'refreshAccessToken').mockRejectedValue(new Error('invalid_grant: refresh token expired'));
+        const clearSpy = jest.spyOn(tokenStorage, 'clearTokens');
 
-        await expect(tokenStorage.getValidAccessToken()).rejects.toThrow(saveError);
-        expect(tokenStorage.tokens).toBeNull(); // Still nulled in memory
+        const token = await tokenStorage.getValidAccessToken();
+        expect(token).toBeNull();
+        expect(clearSpy).toHaveBeenCalled(); // dead refresh token is purged from disk
+        expect(tokenStorage.tokens).toBeNull();
     });
 
     it('should return null and clear tokens if expired and no refresh token', async () => {
