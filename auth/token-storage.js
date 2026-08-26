@@ -97,6 +97,22 @@ class TokenStorage {
     }
 
     if (this.isTokenExpired()) {
+      // Re-read the file before refreshing: several processes share
+      // ~/.outlook-mcp-tokens.json (this MCP server, the inbox-pipeline sweep
+      // every 15 minutes, the auth server), each with its own in-memory copy.
+      // If another process already refreshed, the disk holds a fresh access
+      // token AND the rotated refresh token — refreshing again from our stale
+      // in-memory refresh token is at best a wasted round-trip and at worst an
+      // invalid_grant once rotation invalidates it, which clearTokens() then
+      // turns into a full re-auth for everyone. Adopt the disk copy whenever
+      // it is usable.
+      const stale = this.tokens;
+      const onDisk = await this._loadTokensFromFile();
+      if (!onDisk) this.tokens = stale; // unreadable/torn file: keep what we had
+      if (this.tokens && this.tokens.access_token && !this.isTokenExpired()) {
+        console.log('Adopted fresher tokens from disk (refreshed by another process).');
+        return this.tokens.access_token;
+      }
       console.log('Access token expired or nearing expiration. Attempting refresh.');
       if (this.tokens.refresh_token) {
         try {

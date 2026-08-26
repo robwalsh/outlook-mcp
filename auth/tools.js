@@ -51,29 +51,43 @@ async function handleAuthenticate(args) {
 
 /**
  * Check authentication status tool handler
+ *
+ * Answers the question a caller actually has: "will my next call work?"
+ * The old implementation inspected the raw token file and lied in both
+ * directions: an expired access token with a perfectly good refresh token
+ * read as "Not authenticated" (access tokens expire hourly; ensureAuthenticated
+ * refreshes silently, so real calls worked fine), and a server-side-revoked
+ * token that had not yet passed expires_at read as "Authenticated and ready"
+ * while every call failed. Now it goes through the same path real calls use
+ * (refresh included) and then proves the token against Graph with /me.
  * @returns {object} - MCP response
  */
 async function handleCheckAuthStatus() {
   console.error('[CHECK-AUTH-STATUS] Starting authentication status check');
-  
-  const tokens = tokenManager.loadTokenCache();
-  
-  console.error(`[CHECK-AUTH-STATUS] Tokens loaded: ${tokens ? 'YES' : 'NO'}`);
-  
-  if (!tokens || !tokens.access_token) {
-    console.error('[CHECK-AUTH-STATUS] No valid access token found');
+  // Lazy require: auth/index.js requires this file at load time.
+  const { ensureAuthenticated } = require('./index');
+  let accessToken;
+  try {
+    accessToken = await ensureAuthenticated();
+  } catch (e) {
+    console.error('[CHECK-AUTH-STATUS] No usable token (refresh included):', e.message);
     return {
-      content: [{ type: "text", text: "Not authenticated" }]
+      content: [{ type: "text", text: "Not authenticated — no usable token and no refreshable session. Run authenticate." }]
     };
   }
-  
-  console.error('[CHECK-AUTH-STATUS] Access token present');
-  console.error(`[CHECK-AUTH-STATUS] Token expires at: ${tokens.expires_at}`);
-  console.error(`[CHECK-AUTH-STATUS] Current time: ${Date.now()}`);
-  
-  return {
-    content: [{ type: "text", text: "Authenticated and ready" }]
-  };
+  try {
+    const { callGraphAPI } = require('../utils/graph-api');
+    const me = await callGraphAPI(accessToken, 'GET', 'me', null, { $select: 'userPrincipalName' });
+    console.error(`[CHECK-AUTH-STATUS] Graph /me ok (${me && me.userPrincipalName})`);
+    return {
+      content: [{ type: "text", text: `Authenticated and ready (verified against Graph as ${me && me.userPrincipalName ? me.userPrincipalName : 'unknown account'})` }]
+    };
+  } catch (e) {
+    console.error('[CHECK-AUTH-STATUS] Token held locally but Graph rejected it:', e.message);
+    return {
+      content: [{ type: "text", text: `Token present but Graph REJECTED it (${String(e.message).slice(0, 120)}) — the session was invalidated server-side. Run authenticate.` }]
+    };
+  }
 }
 
 // Tool definitions
