@@ -80,7 +80,14 @@ async function callGraphAPI(accessToken, method, path, data = null, queryParams 
         method: method,
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // Immutable ids: without this, Exchange item ids (and the webLink
+          // built from them) change whenever a message moves folder, so links
+          // saved into the vault die as soon as the inbox pipeline files the
+          // mail to 3-Done. Graph resolves ids of either format on input
+          // regardless of this header (verified 2026-08-27), so it is safe
+          // to send unconditionally.
+          'Prefer': 'IdType="ImmutableId"'
         }
       };
 

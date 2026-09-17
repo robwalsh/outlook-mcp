@@ -4,6 +4,7 @@
 const config = require('../config');
 const { callGraphAPI } = require('../utils/graph-api');
 const { ensureAuthenticated } = require('../auth');
+const { looksLikeHtml } = require('../utils/html-sanitizer');
 
 /**
  * Send email handler
@@ -76,7 +77,7 @@ async function handleSendEmail(args) {
     // Determine content type: explicit isHtml param takes precedence, otherwise auto-detect
     const contentType = isHtml === true ? 'html' :
                         isHtml === false ? 'text' :
-                        (body.includes('<html') || body.includes('<HTML')) ? 'html' : 'text';
+                        looksLikeHtml(body) ? 'html' : 'text';
 
     // Prepare email object
     const emailObject = {

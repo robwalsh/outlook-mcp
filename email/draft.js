@@ -3,6 +3,7 @@
  */
 const { callGraphAPI } = require('../utils/graph-api');
 const { ensureAuthenticated } = require('../auth');
+const { looksLikeHtml } = require('../utils/html-sanitizer');
 
 /**
  * Draft email handler
@@ -12,7 +13,7 @@ const { ensureAuthenticated } = require('../auth');
  * @returns {object} - MCP response
  */
 async function handleDraftEmail(args) {
-  const { to, cc, bcc, subject = '', body = '', importance = 'normal' } = args || {};
+  const { to, cc, bcc, subject = '', body = '', importance = 'normal', isHtml } = args || {};
 
   try {
     // Get access token
@@ -41,7 +42,9 @@ async function handleDraftEmail(args) {
     const messageObject = {
       subject,
       body: {
-        contentType: typeof body === 'string' && body.toLowerCase().includes('<html') ? 'html' : 'text',
+        contentType: isHtml === true ? 'html' :
+                     isHtml === false ? 'text' :
+                     looksLikeHtml(body) ? 'html' : 'text',
         content: body
       },
       toRecipients: toRecipients.length > 0 ? toRecipients : undefined,

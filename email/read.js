@@ -100,6 +100,7 @@ ${cc !== 'None' ? `CC: ${cc}\n` : ''}${bcc !== 'None' ? `BCC: ${bcc}\n` : ''}Sub
 Date: ${date}
 Importance: ${email.importance || 'normal'}
 Has Attachments: ${email.hasAttachments ? 'Yes' : 'No'}
+${email.webLink ? `Link: ${email.webLink}` : ''}
 ${bodyNote}
 ${body}`;
 

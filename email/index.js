@@ -162,6 +162,10 @@ const emailTools = [
           type: "string",
           description: "Draft email body content (can be plain text or HTML)"
         },
+        isHtml: {
+          type: "boolean",
+          description: "Set to true to save the body as HTML, false for plain text. If not specified, auto-detects based on presence of HTML tags."
+        },
         importance: {
           type: "string",
           description: "Email importance (normal, high, low)",

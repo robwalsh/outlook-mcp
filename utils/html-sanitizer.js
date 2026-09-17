@@ -363,8 +363,23 @@ function processHtmlEmail(html, options = {}) {
   return content;
 }
 
+/**
+ * Detect whether a message body is HTML rather than plain text.
+ * Matches any opening/closing occurrence of a common email markup tag,
+ * not just a full <html> document wrapper — Graph drafts are often
+ * fragments like "<p>Hi</p><p>...</p>".
+ *
+ * @param {string} body - Message body content
+ * @returns {boolean} - True if the body should be sent with contentType 'html'
+ */
+function looksLikeHtml(body) {
+  if (typeof body !== 'string') return false;
+  return /<\/?(html|body|head|p|br|div|span|table|tr|td|th|a|b|i|u|em|strong|ul|ol|li|h[1-6]|img|blockquote|hr)\b[^>]*\/?>/i.test(body);
+}
+
 module.exports = {
   sanitizeHtmlToText,
+  looksLikeHtml,
   processHtmlEmail,
   wrapEmailContent,
   removeInvisibleChars,
