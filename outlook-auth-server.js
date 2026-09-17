@@ -50,7 +50,11 @@ const AUTH_CONFIG = {
     'Mail.Send',
     'Calendars.Read',
     'Calendars.ReadWrite',
-    'Contacts.Read'
+    'Contacts.Read',
+    // Chat.Read added 2026-09-17 for Merlyn's Stage-7.5 teams lens. This list
+    // is what the MINT actually requests; consent in Entra alone is not enough
+    // if the request never asks.
+    'Chat.Read'
   ],
   tokenStorePath: path.join(process.env.HOME || process.env.USERPROFILE, '.outlook-mcp-tokens.json')
 };
