@@ -8,13 +8,13 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/Rob/claude/github/outlook-mcp/deploy/cap-logs.sh</string>
+        <string>/Users/rob/claude/github/outlook-mcp/deploy/cap-logs.sh</string>
     </array>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>HOME</key>
-        <string>/Users/Rob</string>
+        <string>/Users/rob</string>
     </dict>
 
     <!-- Run weekly: Sunday 03:10. Does not run at load. -->
@@ -31,8 +31,8 @@
     <false/>
 
     <key>StandardOutPath</key>
-    <string>/Users/Rob/Library/Logs/outlook-mcp/logcap.log</string>
+    <string>/Users/rob/Library/Logs/outlook-mcp/logcap.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/Rob/Library/Logs/outlook-mcp/logcap.log</string>
+    <string>/Users/rob/Library/Logs/outlook-mcp/logcap.log</string>
 </dict>
 </plist>

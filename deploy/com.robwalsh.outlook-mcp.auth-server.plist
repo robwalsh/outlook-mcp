@@ -9,18 +9,18 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/bin/node</string>
-        <string>/Users/Rob/claude/github/outlook-mcp/outlook-auth-server.js</string>
+        <string>/Users/rob/claude/github/outlook-mcp/outlook-auth-server.js</string>
     </array>
 
     <!-- Required: the auth server calls dotenv.config() with no path, so it loads
          .env relative to the working directory. Must be the repo root. -->
     <key>WorkingDirectory</key>
-    <string>/Users/Rob/claude/github/outlook-mcp</string>
+    <string>/Users/rob/claude/github/outlook-mcp</string>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>HOME</key>
-        <string>/Users/Rob</string>
+        <string>/Users/rob</string>
         <key>PATH</key>
         <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
@@ -36,8 +36,8 @@
     <string>Background</string>
 
     <key>StandardOutPath</key>
-    <string>/Users/Rob/Library/Logs/outlook-mcp/auth-server.log</string>
+    <string>/Users/rob/Library/Logs/outlook-mcp/auth-server.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/Rob/Library/Logs/outlook-mcp/auth-server.error.log</string>
+    <string>/Users/rob/Library/Logs/outlook-mcp/auth-server.error.log</string>
 </dict>
 </plist>

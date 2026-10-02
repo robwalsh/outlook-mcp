@@ -3,10 +3,10 @@
 # for the CURRENT user. Idempotent: safe to re-run after editing a plist.
 #
 # Run from your Mac terminal:
-#   bash /Users/Rob/claude/github/outlook-mcp/deploy/install.sh
+#   bash /Users/rob/claude/github/outlook-mcp/deploy/install.sh
 set -uo pipefail
 
-REPO="/Users/Rob/claude/github/outlook-mcp"
+REPO="/Users/rob/claude/github/outlook-mcp"
 DEPLOY="$REPO/deploy"
 LA="$HOME/Library/LaunchAgents"
 LOGDIR="$HOME/Library/Logs/outlook-mcp"
