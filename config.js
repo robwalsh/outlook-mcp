@@ -22,7 +22,8 @@ module.exports = {
     redirectUri: 'http://localhost:3333/auth/callback',
     // Chat.Read added 2026-09-17 for Merlyn's Stage-7.5 teams lens (chats only;
     // channel messages would additionally need admin-consented ChannelMessage.Read.All).
-    scopes: ['Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'User.Read', 'Calendars.Read', 'Calendars.ReadWrite', 'Files.Read', 'Files.ReadWrite', 'Chat.Read'],
+    // MailboxSettings.ReadWrite added 2026-10-14 for Merlyn's server-side inbox rules.
+    scopes: ['Mail.Read', 'Mail.ReadWrite', 'Mail.Send', 'User.Read', 'Calendars.Read', 'Calendars.ReadWrite', 'Files.Read', 'Files.ReadWrite', 'Chat.Read', 'MailboxSettings.ReadWrite'],
     tokenStorePath: path.join(homeDir, '.outlook-mcp-tokens.json'),
     authServerUrl: 'http://localhost:3333'
   },

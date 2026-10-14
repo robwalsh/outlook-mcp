@@ -54,7 +54,11 @@ const AUTH_CONFIG = {
     // Chat.Read added 2026-09-17 for Merlyn's Stage-7.5 teams lens. This list
     // is what the MINT actually requests; consent in Entra alone is not enough
     // if the request never asks.
-    'Chat.Read'
+    'Chat.Read',
+    // MailboxSettings.ReadWrite added 2026-10-14 for Merlyn's server-side inbox
+    // rules (ops/inbox-pipeline/rules-sync.js in ~/merlyn): GET/POST/PATCH
+    // /me/mailFolders/inbox/messageRules. Granted in Entra by Rob the same day.
+    'MailboxSettings.ReadWrite'
   ],
   tokenStorePath: path.join(process.env.HOME || process.env.USERPROFILE, '.outlook-mcp-tokens.json')
 };
